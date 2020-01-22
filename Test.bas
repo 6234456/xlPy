@@ -19,5 +19,14 @@ Sub test()
     py.print_ py.range_(-1, 6, 2)
     
     py.print_ py.enumerate(py.toCharArr("Qiou Yang"))
+    
+    py.print_ py.len_("qiou")
+    py.print_ py.len_(d.fromString("[1, 2,3, 4, [], {}]"))
+    
+    py.print_ py.eval("[1,2,3, {'12': 23, '234': 'qiou'}, 0]")
+    
+    py.print_ py.reversed("qiou.eu").join("")
+    
+    py.print_ py.walk("C:\Users\qiou\Downloads\BWL").getVal(0).Name
 
 End Sub
