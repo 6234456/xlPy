@@ -3,7 +3,7 @@
 '@author                                   Qiou Yang
 '@license                                  MIT
 '@dependency                               Lists, Nodes, TreeSets
-'@lastUpdate                               30.12.2019
+'@lastUpdate                               21.01.2020
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Option Explicit
@@ -12,16 +12,19 @@ Option Explicit
 
 Private d As Dicts
 Private l As Lists
+Private fso As Object
 
 
 Private Sub Class_Initialize()
     Set l = New Lists
     Set d = New Dicts
+    Set fso = CreateObject("scripting.filesystemobject")
 End Sub
 
 Private Sub Class_Terminate()
     Set l = Nothing
     Set d = Nothing
+    Set fso = Nothing
 End Sub
 
 Public Function abs_(ByVal num) As Double
@@ -126,9 +129,20 @@ Public Function enumerate(ByVal iter, Optional ByVal start As Integer = 0) As Di
 End Function
 
 Public Function len_(ByVal val As Variant) As Integer
+    Dim tmp As String
+    tmp = TypeName(val)
     
-    
-
+    If IsArray(val) Then
+        len_ = UBound(val) - LBound(val) + 1
+    ElseIf tmp = "Lists" Then
+        len_ = val.length
+    ElseIf tmp = "Dicts" Or tmp = "Collection" Then
+        len_ = val.Count
+    ElseIf tmp = "String" Then
+        len_ = Len(val)
+    Else
+        Err.Raise 9, , "TypeError: object of type '" & tmp & "' has no len()"
+    End If
 End Function
 
 Public Function toCharArr(ByVal s As String) As Lists
@@ -136,19 +150,19 @@ Public Function toCharArr(ByVal s As String) As Lists
 End Function
 
 Public Function print_(ByVal val As Variant)
-    Debug.Print toString(val)
+    Debug.Print repr(val)
 End Function
 
-Private Function toString(ByVal arr As Variant) As String
-    Dim d As New Dicts
-    toString = d.x_toString(arr)
-    Set d = Nothing
+Public Function eval(ByVal s As String)
+    If IsObject(d.fromString(s)) Then
+        Set eval = d.fromString(s)
+    Else
+        eval = d.fromString(s)
+    End If
 End Function
 
-Private Function str2Arr(ByVal s As String) As Variant
-
-    
-
+Public Function repr(ByVal arr As Variant) As String
+    repr = d.x_toString(arr)
 End Function
 
 Public Function isIterable(ByVal v As Variant) As Boolean
@@ -170,7 +184,6 @@ End Function
 Public Function ascii(ByVal v As String) As Integer
     ascii = Asc(v)
 End Function
-
 
 Public Function chr_(ByVal v As Integer) As Integer
     chr_ = Chr(v)
@@ -195,4 +208,25 @@ Public Function range_(ByVal param1, Optional ByVal param2, Optional ByVal param
         End If
     End If
 
+End Function
+
+Public Function reversed(ByRef val As Variant) As Lists
+    Dim tmp As String
+    tmp = TypeName(val)
+    
+    If IsArray(val) Or tmp = "Collection" Then
+        Set reversed = l.fromArray(val).reverse()
+    ElseIf tmp = "Lists" Then
+        Set reversed = val.reverse()
+    ElseIf tmp = "Dicts" Then
+        Set reversed = reversed(d.keysArr)
+    ElseIf tmp = "String" Then
+        Set reversed = reversed(l.fromString(val))
+    Else
+        Err.Raise 9, , "TypeError: object of type '" & tmp & "' has no reversed()"
+    End If
+End Function
+
+Public Function walk(ByVal path As String) As Lists
+    Set walk = l.fromArray(fso.getfolder(path).Files)
 End Function
