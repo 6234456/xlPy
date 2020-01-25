@@ -25,8 +25,17 @@ Sub test()
     
     py.print_ py.eval("[1,2,3, {'12': 23, '234': 'qiou'}, 0]")
     
-    py.print_ py.reversed("qiou.eu").join("")
+    py.print_ py.Reversed("qiou.eu").join("")
     
-    py.print_ py.walk("C:\Users\qiou\Downloads\BWL").getVal(0).Name
+    py.print_ py.walk("D:\Books\FSharp\Expert FSahrp 3.0.pdf", 0)
+    
+    py.print_ py.dir_("D:\Books")
+    
+   ' py.print_ py.mkdir_("D:\Books\1\2")
+   
+    With py.open_("demo.txt", "a")
+        .Write "World"
+        .Close
+    End With
 
 End Sub
