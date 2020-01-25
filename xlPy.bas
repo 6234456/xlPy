@@ -3,22 +3,26 @@
 '@author                                   Qiou Yang
 '@license                                  MIT
 '@dependency                               Lists, Nodes, TreeSets
-'@lastUpdate                               21.01.2020
+'@lastUpdate                               25.01.2020
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Option Explicit
 
 ' TypeError 9
+' ValueError 5
 
 Private d As Dicts
 Private l As Lists
 Private fso As Object
+Private pSep As String ' the path separator of the system
 
 
 Private Sub Class_Initialize()
     Set l = New Lists
     Set d = New Dicts
     Set fso = CreateObject("scripting.filesystemobject")
+    pSep = "\"
+    ChDir ThisWorkbook.path
 End Sub
 
 Private Sub Class_Terminate()
@@ -26,6 +30,18 @@ Private Sub Class_Terminate()
     Set d = Nothing
     Set fso = Nothing
 End Sub
+
+Public Property Get sep() As String
+    sep = pSep
+End Property
+
+Public Property Let sep(ByVal v As String)
+    pSep = v
+End Property
+
+Public Property Let wd(ByVal v As String)
+    ChDir v
+End Property
 
 Public Function abs_(ByVal num) As Double
     abs_ = Abs(num)
@@ -210,23 +226,149 @@ Public Function range_(ByVal param1, Optional ByVal param2, Optional ByVal param
 
 End Function
 
-Public Function reversed(ByRef val As Variant) As Lists
+Public Function Reversed(ByRef val As Variant) As Lists
     Dim tmp As String
     tmp = TypeName(val)
     
     If IsArray(val) Or tmp = "Collection" Then
-        Set reversed = l.fromArray(val).reverse()
+        Set Reversed = l.fromArray(val).reverse()
     ElseIf tmp = "Lists" Then
-        Set reversed = val.reverse()
+        Set Reversed = val.reverse()
     ElseIf tmp = "Dicts" Then
-        Set reversed = reversed(d.keysArr)
+        Set Reversed = Reversed(d.keysArr)
     ElseIf tmp = "String" Then
-        Set reversed = reversed(l.fromString(val))
+        Set Reversed = Reversed(l.fromString(val))
     Else
         Err.Raise 9, , "TypeError: object of type '" & tmp & "' has no reversed()"
     End If
 End Function
 
-Public Function walk(ByVal path As String) As Lists
-    Set walk = l.fromArray(fso.getfolder(path).Files)
+' list all the files
+Public Function walk(ByVal path As String, Optional ByVal recursive As Boolean = False) As Lists
+
+    If fso.FolderExists(path) Then
+        Set walk = l.fromArray(fso.getfolder(path).Files)
+        
+        If recursive Then
+            Dim e
+            For Each e In fso.getfolder(path).SubFolders
+                Set walk = walk.addAll(Me.walk(fso.buildpath(path, e.Name), True))
+            Next e
+        End If
+    ElseIf fso.FileExists(path) Then
+        Set walk = l.fromArray(Array(fso.getfile(path)))
+    Else
+        Set walk = l.fromArray(Array())
+    End If
+   
+End Function
+
+' list the directory structure
+Public Function dir_(ByVal path As String)
+    Dim d2 As New Dicts
+    
+    
+    If fso.FolderExists(path) Then
+        Dim l2 As Lists
+        Set l2 = Me.walk(path)
+        
+        Dim e
+        For Each e In fso.getfolder(path).SubFolders
+            l2.add Me.dir_(fso.buildpath(path, e.Name))
+        Next e
+        
+        d2.add path, l2
+    
+        Set dir_ = d2
+    ElseIf fso.FileExists(path) Then
+        Set dir_ = Me.walk(path)
+    Else
+        Set dir_ = d2
+    End If
+    
+    Set d2 = Nothing
+End Function
+
+' create directory recursively
+Public Function mkdir_(ByVal path As String)
+    Dim path_ As String
+    path_ = fso.GetAbsolutePathName(path)
+    If Not fso.FolderExists(path_) Then
+        Dim tmpS As String
+        tmpS = l.fromArray(Split(path_, pSep)).dropLast(1).join(pSep)
+            
+        If Not fso.FolderExists(tmpS) Then
+            mkdir_ tmpS
+        End If
+        
+        fso.CreateFolder path
+    End If
+End Function
+
+' return a TextStream Object
+' https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/textstream-object
+' binary use Write() and Read()
+Public Function open_(ByVal file As String, Optional ByVal mode As String = "r") As Object
+    If InStr(mode, "b") > 0 And InStr(mode, "t") > 0 Then
+        Err.Raise 5, , "ValueError: can't have text and binary mode at once"
+    End If
+    
+    If Len(mode) > 3 Then
+        Err.Raise 5, , "ValueError: invalid mode: '" & mode & "'"
+    End If
+    
+    Dim formatNumber As Integer
+    formatNumber = IIf(InStr(mode, "b"), -2, -1)
+    
+    Dim hasMode1 As Integer
+    hasMode1 = 0
+    
+    Dim hasMode2 As Integer
+    hasMode2 = 0
+    
+    Dim hasMode3 As Integer
+    hasMode3 = 0
+    
+    Dim e
+    For Each e In Me.toCharArr(mode).toArray
+       If e = "a" Or e = "w" Or e = "x" Or e = "r" Then
+            hasMode1 = hasMode1 + 1
+       ElseIf e = "b" Or e = "t" Then
+            hasMode2 = hasMode2 + 1
+       ElseIf e = "+" Then
+            hasMode3 = hasMode3 + 1
+       Else
+            Err.Raise 5, , "ValueError: invalid mode: '" & mode & "'"
+       End If
+    Next e
+    
+    If hasMode1 <> 1 Then
+         Err.Raise 5, , "must have exactly one of create/read/write/append mode"
+    End If
+    
+    If hasMode2 > 1 Or hasMode3 > 1 Then
+        Err.Raise 5, , "ValueError: invalid mode: '" & mode & "'"
+    End If
+    
+    If InStr(mode, "w") > 0 Or InStr(mode, "x") > 0 Or InStr(mode, "+") > 0 Then
+        Dim path_ As String
+        path_ = fso.GetAbsolutePathName(file)
+        
+        If Not fso.FileExists(path_) Then
+            Dim tmpS As String
+            tmpS = l.fromArray(Split(path_, pSep)).dropLast(1).join(pSep)
+            mkdir_ tmpS
+            
+            Set open_ = fso.CreateTextFile(path_, Unicode:=1)
+        ElseIf InStr(mode, "x") > 0 Then
+            Err.Raise 17, , "FileExistsError: File exists: '" & path_ & "'"
+        ElseIf InStr(mode, "w") > 0 Or InStr(mode, "+") > 0 Then
+            Set open_ = fso.getfile(path_).OpenAsTextStream(iomode:=2, Format:=formatNumber)
+        End If
+    ElseIf InStr(mode, "r") > 0 Then
+        Set open_ = fso.getfile(file).OpenAsTextStream(iomode:=1, Format:=formatNumber)
+    ElseIf InStr(mode, "a") > 0 Then
+        Set open_ = fso.getfile(file).OpenAsTextStream(iomode:=8, Format:=formatNumber)
+    End If
+    
 End Function
