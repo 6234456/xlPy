@@ -27,9 +27,9 @@ Sub test()
     
     py.print_ py.Reversed("qiou.eu").join("")
     
-    py.print_ py.walk("D:\Books\FSharp\Expert FSahrp 3.0.pdf", 0)
+  '  py.print_ py.walk("D:\Books\FSharp\Expert FSahrp 3.0.pdf", 0)
     
-    py.print_ py.dir_("D:\Books")
+  '  py.print_ py.dir_("D:\Books")
     
    ' py.print_ py.mkdir_("D:\Books\1\2")
    
@@ -37,5 +37,16 @@ Sub test()
         .Write "World"
         .Close
     End With
+    
+   ' py.print_ py.request("GET", "http://wenshu.court.gov.cn/website/wenshu/js/wenshulist1.js")
+   
+   With py.open_("C:\Users\User\Downloads\data.txt", "rb")
+        
+       ' Debug.Print Mid$(Trim(.readall), 147)
+        ' ## parseJSON between the closing } and ] can not contains blank
+        py.eval(.readall).p
+
+       .Close
+   End With
 
 End Sub
