@@ -3,7 +3,7 @@
 '@author                                   Qiou Yang
 '@license                                  MIT
 '@dependency                               Lists, Nodes, TreeSets
-'@lastUpdate                               25.01.2020
+'@lastUpdate                               27.01.2020
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Option Explicit
@@ -15,12 +15,15 @@ Private d As Dicts
 Private l As Lists
 Private fso As Object
 Private pSep As String ' the path separator of the system
+Private http As Object
+    
 
 
 Private Sub Class_Initialize()
     Set l = New Lists
     Set d = New Dicts
     Set fso = CreateObject("scripting.filesystemobject")
+    Set http = CreateObject("MSXML2.XMLHTTP")
     pSep = "\"
     ChDir ThisWorkbook.path
 End Sub
@@ -29,6 +32,7 @@ Private Sub Class_Terminate()
     Set l = Nothing
     Set d = Nothing
     Set fso = Nothing
+    Set http = Nothing
 End Sub
 
 Public Property Get sep() As String
@@ -108,14 +112,14 @@ Public Function bin(ByVal num As Integer) As String
     End If
 End Function
 
-Public Function bool(ByVal x) As Boolean
+Public Function bool(ByVal X) As Boolean
 
     bool = True
     
-    If IsObject(x) Then
-        bool = x Is Nothing
+    If IsObject(X) Then
+        bool = X Is Nothing
     Else
-        If IsNull(x) Or x = 0 Or x = False Then
+        If IsNull(X) Or X = 0 Or X = False Then
             bool = False
         End If
     End If
@@ -170,6 +174,7 @@ Public Function print_(ByVal val As Variant)
 End Function
 
 Public Function eval(ByVal s As String)
+    s = Replace(s, Chr(13) & Chr(10), "")
     If IsObject(d.fromString(s)) Then
         Set eval = d.fromString(s)
     Else
@@ -308,6 +313,7 @@ End Function
 ' return a TextStream Object
 ' https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/textstream-object
 ' binary use Write() and Read()
+' Text ReadAll()
 Public Function open_(ByVal file As String, Optional ByVal mode As String = "r") As Object
     If InStr(mode, "b") > 0 And InStr(mode, "t") > 0 Then
         Err.Raise 5, , "ValueError: can't have text and binary mode at once"
@@ -359,7 +365,7 @@ Public Function open_(ByVal file As String, Optional ByVal mode As String = "r")
             tmpS = l.fromArray(Split(path_, pSep)).dropLast(1).join(pSep)
             mkdir_ tmpS
             
-            Set open_ = fso.CreateTextFile(path_, Unicode:=1)
+            Set open_ = fso.createtextfile(path_, Unicode:=1)
         ElseIf InStr(mode, "x") > 0 Then
             Err.Raise 17, , "FileExistsError: File exists: '" & path_ & "'"
         ElseIf InStr(mode, "w") > 0 Or InStr(mode, "+") > 0 Then
@@ -370,5 +376,44 @@ Public Function open_(ByVal file As String, Optional ByVal mode As String = "r")
     ElseIf InStr(mode, "a") > 0 Then
         Set open_ = fso.getfile(file).OpenAsTextStream(iomode:=8, Format:=formatNumber)
     End If
+    
+End Function
+
+' Tools -> Reference -> "Microsoft HTML Object Library"
+Function request(ByVal method As String, ByVal url As String, Optional ByVal isAsync As Boolean, Optional ByVal data As String, Optional ByRef header As Dicts, Optional ByVal asText As Boolean = True)
+    With http
+        .Open method, url, isAsync
+        
+        If Not header Is Nothing Then
+            Dim e
+            For Each e In header.Keys
+                .setRequestHeader e, header.Item(e)
+            Next e
+        End If
+        
+        .setRequestHeader "content-type", "application/x-www-form-urlencoded; charset=utf-8"
+        If data = "" Then
+            .send
+        Else
+            .send data
+        End If
+        
+        If .readyState = 4 And .Status = 200 Then
+            If asText Then
+                request = Trim(.responseText)
+            Else
+                Dim doc As MSHTML.HTMLDocument
+                Set doc = New MSHTML.HTMLDocument
+
+                doc.body.innerHTML = Trim(.responseText)
+                
+                Set request = doc
+                Set doc = Nothing
+            End If
+        Else
+            MsgBox "Error" & vbNewLine & "Ready state: " & .readyState & _
+            vbNewLine & "HTTP request status: " & .Status
+        End If
+    End With
     
 End Function
