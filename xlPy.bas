@@ -3,7 +3,8 @@
 '@author                                   Qiou Yang
 '@license                                  MIT
 '@dependency                               Lists, Nodes, TreeSets
-'@lastUpdate                               27.01.2020
+'@lastUpdate                               10.02.2020
+'                                          enumerate an array will return array as value instead of List
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Option Explicit
@@ -112,14 +113,14 @@ Public Function bin(ByVal num As Integer) As String
     End If
 End Function
 
-Public Function bool(ByVal X) As Boolean
+Public Function bool(ByVal x) As Boolean
 
     bool = True
     
-    If IsObject(X) Then
-        bool = X Is Nothing
+    If IsObject(x) Then
+        bool = x Is Nothing
     Else
-        If IsNull(X) Or X = 0 Or X = False Then
+        If IsNull(x) Or x = 0 Or x = False Then
             bool = False
         End If
     End If
@@ -137,7 +138,10 @@ Public Function enumerate(ByVal iter, Optional ByVal start As Integer = 0) As Di
     End If
     
     If IsArray(iter) Or TypeName(iter) = "Collection" Then
-        Set enumerate = enumerate(l.fromArray(iter))
+        Dim tmp As Lists
+        Set tmp = l.fromArray(iter)
+        Set enumerate = d.arrToDict(Me.range_(0, tmp.length).toArray, tmp.toArray)
+        Set tmp = Nothing
     ElseIf TypeName(iter) = "Lists" Then
         Set enumerate = iter.toMap
     ElseIf TypeName(iter) = "Dicts" Then
